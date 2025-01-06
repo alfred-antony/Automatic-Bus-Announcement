@@ -1,0 +1,5 @@
+#path: C:\PROJECT\datasets
+train: datasets/train/images
+val: datasets/val/images
+nc: 1
+names: ['bus']
