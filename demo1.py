@@ -19,7 +19,8 @@ from gtts import gTTS
 import datetime
 
 # Set the environment variable for authentication
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = r'C:/PROJECT/transit-vision-2e6350ac393a.json'  # Update with the new path
+os.environ[
+    'GOOGLE_APPLICATION_CREDENTIALS'] = r'C:/PROJECT/transit-vision-2e6350ac393a.json'  # Update with the new path
 
 # Load the trained YOLO model
 model = YOLO("C:/PROJECT/runs/detect/bus_and_board10/weights/best.pt")  # Update with your trained model path
@@ -31,7 +32,7 @@ tracker = Sort()
 vision_client = vision.ImageAnnotatorClient()
 
 # Initialize video capture
-cap = cv2.VideoCapture("C:/PROJECT/test/VID20250209164511.mp4")  # Use '0' for webcam
+cap = cv2.VideoCapture("C:/PROJECT/test/VID20250209164359.mp4")  # Use '0' for webcam
 # C:/PROJECT/test/VID20250113063317.mp4
 # C:/PROJECT/test/VID20250209164359.mp4
 # C:/PROJECT/test/VID20250209164417.mp4
@@ -39,7 +40,7 @@ cap = cv2.VideoCapture("C:/PROJECT/test/VID20250209164511.mp4")  # Use '0' for w
 # C:/PROJECT/test/VID20250209164511.mp4
 
 frame_count = 0
-process_every_n_frames = 5  # Adjust as needed
+process_every_n_frames = 10  # Adjust as needed
 unique_bus_ids = set()
 
 # Define output directory for audio files
@@ -107,7 +108,7 @@ while cap.isOpened():
     if frame_count % process_every_n_frames != 0:
         continue
 
-    # Perform detection
+        # Perform detection
     results = model(frame)
     detections = []
 
@@ -140,12 +141,12 @@ while cap.isOpened():
             if obj_id not in unique_bus_ids:
                 unique_bus_ids.add(obj_id)
 
-            # Draw bounding box and object ID
+                # Draw bounding box and object ID
             cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
             cv2.putText(frame, f'ID: {int(obj_id)}', (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (0, 255, 0), 2)
 
-    # Display the frame with tracking
+            # Display the frame with tracking
     cv2.imshow('Bus Tracking', frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break

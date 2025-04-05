@@ -1,3 +1,4 @@
+#for checking board images withou using detection model
 import os
 import cv2
 from google.cloud import vision

@@ -1,5 +1,7 @@
 #path: C:\PROJECT\datasets
-train: datasets/train/images
-val: datasets/val/images
-nc: 1
-names: ['bus']
+#train: datasets/train/images
+train: C:\Users\LEGION\Pictures\datasets\train\images
+#val: datasets/val/images
+val: C:\Users\LEGION\Pictures\datasets\val\images
+nc: 2
+names: ['bus','board']

@@ -9,7 +9,7 @@ os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = r'C:/PROJECT/transit-vision-2e635
 client = vision.ImageAnnotatorClient()
 
 # Read the image file
-with open('C:/PROJECT/test/KSRTCtemp.jpg', 'rb') as image_file:
+with open('C:/PROJECT/test/1-671-_jpg.rf.f9706ddd4d968a26ee2676f14ceaa544.jpg', 'rb') as image_file:
     content = image_file.read()
 # "C:\Users\LEGION\Pictures\Screenshots\Screenshot 2025-01-21 111240.png"
 # "C:\PROJECT\test\crop4.jpg"
