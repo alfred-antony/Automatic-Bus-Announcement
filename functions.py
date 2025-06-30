@@ -12,6 +12,7 @@ import datetime
 import queue
 import time
 import re
+import json
 from playsound import playsound
 
 # Set the environment variable for authentication
@@ -32,11 +33,20 @@ vision_client = vision.ImageAnnotatorClient()
 # Initialize video capture
 cap = cv2.VideoCapture(0)
 
+latest_extracted_text = ""
+
 frame_count = 0
 process_every_n_frames = 15
 unique_bus_ids = {}
 best_text_per_bus = {}
 bus_timeout_seconds = 3
+
+bus_history = []
+try:
+    with open('history.json', 'r') as f:
+        bus_history = json.load(f)
+except FileNotFoundError:
+    bus_history = []
 
 # Define output directory for audio files
 output_dir = "C:/PROJECT/audio/"
@@ -45,6 +55,15 @@ os.makedirs(output_dir, exist_ok=True)
 # Initialize the audio queue
 audio_queue = queue.Queue()
 
+def add_to_history(bus_text):
+    if bus_text:
+        timestamp = datetime.datetime.now().strftime('%H:%M:%S  %d-%m-%Y')
+        bus_history.append({'text': bus_text, 'time': timestamp})
+        print(f"[HISTORY] Added: {bus_text} at {timestamp}")
+
+        # Save history to file
+        with open('history.json', 'w') as f:
+            json.dump(bus_history, f)
 
 # Audio playback worker function
 def audio_player():
@@ -223,7 +242,7 @@ text_history_per_bus = {}  # Stores detected text history for each bus
 
 
 def process_frame(frame):
-    global best_text_per_bus, unique_bus_ids, text_history_per_bus
+    global best_text_per_bus, unique_bus_ids, text_history_per_bus, latest_extracted_text
     results = model(frame)
     current_time = time.time()  # Current time in seconds
 
@@ -235,18 +254,20 @@ def process_frame(frame):
         for box in result.boxes:
             # Apply confidence threshold
             if box.conf[0] < 0.6:  # Filter out low-confidence detections
-                print(f"Skipping low-confidence bus detection: {box.conf[0]}")
+                print(f"Skipping low-confidence detection: {box.conf[0]}")
                 continue
 
+            x1, y1, x2, y2 = map(int, box.xyxy[0].cpu().numpy())
+
             if box.cls[0] == 0:  # Class 0 for buses
-                x1, y1, x2, y2 = map(int, box.xyxy[0].cpu().numpy())
                 bus_detections.append({"obj_id": None, "box": [x1, y1, x2, y2]})
+
             elif box.cls[0] == 1:  # Class 1 for boards
-                x1, y1, x2, y2 = map(int, box.xyxy[0].cpu().numpy())
                 cropped_board = frame[y1:y2, x1:x2]
                 text, area = extract_text_from_board(cropped_board)
                 board_detections.append({"box": [x1, y1, x2, y2], "text": text, "area": area})
 
+    # Track and match buses
     if len(bus_detections) > 0:
         bus_boxes = np.array([bus["box"] for bus in bus_detections])
         tracked_objects = tracker.update(bus_boxes)
@@ -258,24 +279,33 @@ def process_frame(frame):
             active_buses.add(obj_id)
             unique_bus_ids[obj_id] = current_time
 
-            # Link buses to boards inside their bounding boxes
+            # Link boards inside bus boxes
             bus_box = bus_detections[i]["box"]
             for board in board_detections:
                 board_box = board["box"]
                 if (board_box[0] >= bus_box[0] and board_box[1] >= bus_box[1] and
                         board_box[2] <= bus_box[2] and board_box[3] <= bus_box[3]):
+
                     if obj_id in best_text_per_bus:
                         if board["area"] > best_text_per_bus[obj_id]["area"]:
-                            best_text_per_bus[obj_id].update({"text": board["text"], "area": board["area"]})
+                            best_text_per_bus[obj_id].update({
+                                "text": board["text"],
+                                "area": board["area"]
+                            })
                     else:
-                        best_text_per_bus[obj_id] = {"text": board["text"], "area": board["area"], "announced": False,
-    "last_announced_text": None }
+                        best_text_per_bus[obj_id] = {
+                            "text": board["text"],
+                            "area": board["area"],
+                            "announced": False,
+                            "last_announced_text": None
+                        }
 
+            # Draw bounding box
             cv2.rectangle(frame, (int(bus_box[0]), int(bus_box[1])), (int(bus_box[2]), int(bus_box[3])), (0, 255, 0), 2)
             cv2.putText(frame, f'ID: {obj_id}', (int(bus_box[0]), int(bus_box[1]) - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-    # Handle departed buses and announcements
+    # Handle departed buses and play audio
     departed_buses = []
     for obj_id, last_seen_time in unique_bus_ids.items():
         if obj_id not in active_buses and current_time - last_seen_time > bus_timeout_seconds:
@@ -283,13 +313,16 @@ def process_frame(frame):
 
     for obj_id in departed_buses:
         if obj_id in best_text_per_bus:
-            if best_text_per_bus[obj_id]["text"] != best_text_per_bus[obj_id]["last_announced_text"]:
-                announce_text(best_text_per_bus[obj_id]["text"], obj_id)
-                best_text_per_bus[obj_id]["last_announced_text"] = best_text_per_bus[obj_id]["text"]
-
-        # Reset or remove bus state upon departure
+            current_text = best_text_per_bus[obj_id]["text"]
+            if current_text != best_text_per_bus[obj_id]["last_announced_text"]:
+                announce_text(current_text, obj_id)
+                best_text_per_bus[obj_id]["last_announced_text"] = current_text
+                latest_extracted_text = current_text
+                add_to_history(current_text)
+                print("TEXT sent LARGEST-->", latest_extracted_text)
+        # Clean up
         unique_bus_ids.pop(obj_id, None)
         text_history_per_bus.pop(obj_id, None)
-        best_text_per_bus.pop(obj_id, None)  # Remove text history when bus departs
+        best_text_per_bus.pop(obj_id, None)
 
     return frame

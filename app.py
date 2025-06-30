@@ -1,14 +1,14 @@
 import os
-from datetime import time
+import time
 
-from flask import Flask, render_template, Response, request
+from flask import Flask, render_template, Response, request, jsonify
 from functions import process_frame, audio_player
+import functions
 
 import threading
 import cv2
 import queue
 import signal
-
 import sys
 
 app = Flask(__name__)
@@ -24,13 +24,10 @@ audio_thread = threading.Thread(target=audio_player, daemon=True)
 audio_thread.start()
 
 # Replace this with your phone's IP
-IP_CAMERA_URL = "http://192.168.137.93:8080//video"
+IP_CAMERA_URL = "http://192.168.137.199:8080//video"
 
 # Your existing code here (YOLO setup, SORT setup, etc.)
 # Keep your `process_frame` function and other helper functions unchanged.
-
-# Initialize the video capture (from your camera or video)
-# cap = cv2.VideoCapture(0)
 
 @app.route('/start_detection')
 def start_detection():
@@ -39,14 +36,22 @@ def start_detection():
     if detection_active:
         return "Detection is already running"
 
+    # Ensure previous thread is not hanging
+    if detection_thread and detection_thread.is_alive():
+        return "Previous detection is still shutting down. Please wait."
+
     try:
         cap = cv2.VideoCapture(IP_CAMERA_URL)
+        # cap = cv2.VideoCapture(0)
         if not cap.isOpened():
-            return "Error: Could not open camera"
+            cap.release()
+            cap = None
+            return "Error: Could not open IP camera"
 
         detection_active = True
         detection_thread = threading.Thread(target=generate_frames, daemon=True)
         detection_thread.start()
+        print("Detection started.")
         return "Detection Started"
 
     except Exception as e:
@@ -56,28 +61,42 @@ def start_detection():
 
 @app.route('/stop_detection')
 def stop_detection():
-    global detection_active, cap, audio_queue, audio_thread
+    global detection_active, cap, detection_thread
 
     if not detection_active:
         return "Detection is not running"
 
-    detection_active = False
+    print("Stopping detection...")
+
+    detection_active = False  # Signal the thread to stop
+
+    # Join the thread
+    if detection_thread and detection_thread.is_alive():
+        detection_thread.join(timeout=5)
+        print("Detection thread stopped.")
+    detection_thread = None
 
     # Release the camera
-    if cap is not None:
+    if cap:
         try:
             cap.release()
-            cap = None
-            print("Camera released successfully.")
+            print("Camera released.")
         except Exception as e:
             print(f"Error releasing camera: {e}")
-
-    # Stop the audio playback thread
-    audio_queue.put(None)  # Send exit signal to the thread
-    audio_thread.join()  # Wait for the thread to finish
+        finally:
+            cap = None
 
     return "Detection Stopped"
 
+@app.route('/latest_text')
+def get_latest_text():
+    # print("Text RECIEVED:", latest_extracted_text)
+    return functions.latest_extracted_text or "Waiting for bus detection..."
+    # return "YESSSS working"
+
+@app.route('/bus_history')
+def bus_history_route():
+    return jsonify(functions.bus_history[-20:][::-1])  # Last 20, most recent first
 
 # Add a signal handler for Ctrl+C
 def graceful_shutdown(signal, frame):
@@ -87,7 +106,7 @@ def graceful_shutdown(signal, frame):
 
     # Stop detection if it's running
     detection_active = False
-    if 'cap' in globals() and cap.isOpened():
+    if 'cap' in globals() and cap is not None and cap.isOpened():
         cap.release()
         print("Released camera resources.")
 
@@ -105,9 +124,12 @@ def graceful_shutdown(signal, frame):
 # Register the signal handler
 signal.signal(signal.SIGINT, graceful_shutdown)
 
+
 def generate_frames():
     global output_frame, lock, detection_active, cap
     frame_count = 0
+
+    print("Started generate_frames thread.")
 
     while detection_active:
         try:
@@ -117,28 +139,28 @@ def generate_frames():
                 if not cap.isOpened():
                     print("Failed to reopen camera. Retrying in 2 seconds...")
                     time.sleep(2)
-                    continue  # Retry opening the camera
+                    continue
 
             ret, frame = cap.read()
             if not ret:
                 print("Warning: Empty frame received.")
-                continue  # Don't exit, just retry
+                time.sleep(0.5)
+                continue
 
             frame_count += 1
             if frame_count % 15 != 0:
                 continue
 
-            frame = process_frame(frame)  # Process frame
+            frame = process_frame(frame)
             with lock:
                 output_frame = frame.copy()
 
         except Exception as e:
             print(f"Error in generate_frames: {e}")
-            time.sleep(2)  # Short delay before retrying
-            continue  # Don't exit, just retry
+            time.sleep(2)
+            continue
 
-    print("Stopped generate_frames thread.")
-
+    print("Exited generate_frames thread.")
 
 
 def stream_frames():
@@ -175,7 +197,11 @@ def index():
 
 @app.route('/live')
 def live():
-    return render_template('frontend/live.html')  # Serve the live page
+    return render_template('frontend/golive.html')  # Serve the live page
+
+@app.route('/history')
+def history_page():
+    return render_template('frontend/history.html')
 
 # @app.route('/home')
 # def live():
@@ -207,7 +233,7 @@ if __name__ == '__main__':
         detection_active = False  # Stop the detection thread
 
         # Release the camera
-        if 'cap' in globals() and cap.isOpened():
+        if 'cap' in globals() and cap is not None and cap.isOpened():
             cap.release()
             print("Released camera resources.")
 

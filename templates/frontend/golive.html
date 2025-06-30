@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Demo - Automatic Bus Announcement System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #1e88e5;
+            --secondary-color: #64b5f6;
+            --dark-color: #0d47a1;
+            --light-color: #e3f2fd;
+            --text-color: #333;
+            --light-text: #f5f5f5;
+            --transition: all 0.3s ease;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --error-color: #f44336;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            color: var(--text-color);
+            line-height: 1.6;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header Styles */
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
+            color: var(--light-text);
+            padding: 20px 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .logo i {
+            font-size: 28px;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+        }
+
+        nav a {
+            color: var(--light-text);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+            font-size: 18px;
+        }
+
+        nav a:hover {
+            color: var(--light-color);
+        }
+
+        /* main content */
+
+        .main-content {
+            margin-top: 100px;
+            padding: 40px 0;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .live-feed {
+            flex: 2;
+            background-color: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            height: 500px;
+        }
+
+        .video-placeholder {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .feed-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        .feed-controls button {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .start-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .stop-btn {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .feed-controls button:hover {
+            opacity: 0.9;
+        }
+
+        .info-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .current-extraction,
+        .extraction-log {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+        }
+
+        .current-extraction {
+            min-height: 150px;
+        }
+
+        .extraction-log {
+            flex-grow: 1;
+        }
+
+        .box-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .box-header h2 {
+            color: #333;
+            font-size: 1.2rem;
+        }
+
+        .current-text {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            min-height: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .log-entry {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .bus-name {
+            font-weight: bold;
+        }
+
+        .timestamp {
+            color: #666;
+            font-weight: bold;
+        }
+
+        .new-entry {
+            animation: fadeIn 1s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                background-color: #ffface;
+            }
+
+            to {
+                background-color: transparent;
+            }
+        }
+
+        .feed-status {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .status-live {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .status-stopped {
+            background-color: #999;
+            color: white;
+        }
+
+        /* Added styles for timestamp display */
+        .current-extraction-footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .current-time {
+            font-weight: bold;
+        }
+
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .log-table th {
+            text-align: left;
+            padding: 8px 12px;
+            background-color: #f5f5f5;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .log-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .log-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .log-table tr.new-entry {
+            animation: fadeIn 1s;
+        }
+
+
+        /* Footer */
+
+        .container-footer {
+
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        footer {
+            background-color: var(--dark-color);
+            color: var(--light-text);
+            padding: 50px 20px;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .footer-section h3 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        .footer-section h3::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 50px;
+            height: 2px;
+            background-color: var(--secondary-color);
+        }
+
+        .contact-info {
+            margin-top: 20px;
+        }
+
+        .contact-info p {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .social-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            color: var(--light-text);
+            font-size: 18px;
+            transition: var(--transition);
+        }
+
+        .social-links a:hover {
+            background-color: var(--primary-color);
+            transform: translateY(-3px);
+        }
+
+        .footer-bottom {
+            text-align: center;
+
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .log-scroll-container {
+            max-height: 200px;
+            /* You can adjust height as needed */
+            overflow-y: auto;
+            border-top: none;
+        }
+
+        /* Optional: make rows look consistent */
+        .log-scroll-container .log-table tr td {
+            padding: 8px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        /* Optional: prevent table header shifting */
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container header-container">
+            <div class="logo">
+                <i class="fas fa-bus"></i>
+                <span>transit vision</span>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <!-- <li><a href="log.html">Log </a></li> -->
+                    <li><a href="#" id="logoutBtn">Logout</a></li>
+                    <!-- <li><a href="live.html">Live Demo</a></li> -->
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- main content -->
+    <div class="main-content">
+        <div class="container">
+            <!-- Live Feed Section -->
+            <div class="live-feed">
+                <div class="video-placeholder">
+                    <!--                    <div id="placeholderText" class="placeholder-text">Live Bus Camera Feed</div>-->
+                    <img id="liveFeed" src="/video_feed" width="100%" height="auto" alt="Bus Tracking Feed"
+                        style="display: none;">
+                </div>
+
+                <div class="feed-status status-stopped" id="feedStatus">DISCONNECTED</div>
+
+                <div class="feed-controls">
+                    <button class="start-btn" id="start-btn">Start Live Feed</button>
+                    <button class="stop-btn" id="stop-btn" disabled>Stop Feed</button>
+                </div>
+            </div>
+
+            <!-- Information Column -->
+            <div class="info-column">
+                <!-- Current Extraction Box -->
+                <div class="current-extraction">
+                    <div class="box-header">
+                        <h2>Current Bus </h2>
+                        <span id="detectionStatus">Waiting for feed...</span>
+                    </div>
+                    <div class="current-text" id="currentExtraction">
+                        No active bus detection
+                    </div>
+                    <div class="current-extraction-footer">
+                        <div>Last updated: <span id="currentTimestamp">--:--:--</span></div>
+                    </div>
+                </div>
+
+                <!-- Extraction Log Box -->
+                <div class="extraction-log">
+                    <div class="box-header">
+                        <h2>Bus Log</h2>
+                        <span>Latest Arrivals</span>
+                    </div>
+                    <table class="log-table">
+                        <thead>
+                            <tr>
+                                <th>Bus Route</th>
+                                <th>Arrival Time</th>
+                            </tr>
+                        </thead>
+                    </table>
+                    <!-- Scrollable wrapper -->
+                    <div class="log-scroll-container">
+                        <table class="log-table">
+                            <tbody id="logEntries">
+                                <tr>
+                                    <td colspan="2" style="text-align: center;">Waiting for detections...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+    <!-- Footer -->
+    <footer>
+        <div class="container-footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About Us</h3>
+                    <p>The Automatic Bus Announcement System provides real-time announcements of bus arrivals.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Contact Us</h3>
+                    <div class="contact-info">
+                        <p><i class="fas fa-envelope"></i> info@transitvision.com</p>
+                        <p><i class="fas fa-phone"></i> +91 98765 43210</p>
+                        <p><i class="fas fa-map-marker-alt"></i> Kerala, India</p>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h3>Follow Us</h3>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 transit vision. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript for Demo Functionality -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            function startDetection() {
+                fetch('/start_detection')
+                    .then(response => response.text())
+                    .then(data => alert(data))
+                    .catch(error => console.error('Error:', error));
+            }
+
+            function stopDetection() {
+                fetch('/stop_detection')
+                    .then(response => response.text())
+                    .then(data => alert(data))
+                    .catch(error => console.error('Error:', error));
+            }
+
+            // DOM Elements
+            const startBtn = document.getElementById('start-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            const detectionStatus = document.getElementById('detectionStatus');
+            const currentExtraction = document.getElementById('currentExtraction');
+            const liveFeed = document.getElementById('liveFeed');
+            const feedStatus = document.getElementById('feedStatus');
+
+            let feedActive = false;
+            let detectionInterval;
+
+            startBtn.addEventListener('click', function () {
+                if (!feedActive) {
+                    feedActive = true;
+                    startDetection();
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    feedStatus.textContent = "LIVE";
+                    feedStatus.className = "feed-status status-live";
+                    detectionStatus.textContent = "Connected";
+                    liveFeed.style.display = 'block';
+                }
+            });
+
+            stopBtn.addEventListener('click', function () {
+                if (feedActive) {
+                    feedActive = false;
+                    currentExtraction.textContent = 'Video feed stopped';
+                    stopDetection();
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    feedStatus.textContent = "STOPPED";
+                    feedStatus.className = "feed-status status-stopped";
+                    detectionStatus.textContent = "Feed stopped";
+                    liveFeed.style.display = 'none';
+                }
+            });
+
+
+            stopBtn.disabled = true;
+
+            let previousText = ""; // Store last detected text
+
+            function fetchLatestText() {
+                fetch('/latest_text')
+                    .then(response => response.text())
+                    .then(text => {
+                        const extractedText = document.getElementById('currentExtraction');
+                        const currentTimestamp = document.getElementById('currentTimestamp');
+
+                        if (text && text !== previousText && text !== "Waiting for bus detection...") {
+                            extractedText.textContent = text;
+
+                            const now = new Date();
+                            const formatted = now.toLocaleTimeString('en-GB') + ' ' + now.toLocaleDateString('en-GB');
+                            currentTimestamp.textContent = formatted;
+
+                            previousText = text; // Update stored text
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching latest text:', error);
+                    });
+            }
+
+            setInterval(fetchLatestText, 2000);
+
+            async function fetchHistory() {
+                try {
+                    const res = await fetch('/bus_history');
+                    const data = await res.json();
+                    const logBody = document.getElementById('logEntries');
+                    logBody.innerHTML = '';
+
+                    if (data.length === 0) {
+                        logBody.innerHTML = `<tr><td colspan="2" style="text-align: center;">No detections yet</td></tr>`;
+                        return;
+                    }
+
+                    data.slice(0, 15).forEach(entry => {
+                        const row = `<tr><td>${entry.text}</td><td>${entry.time}</td></tr>`;
+                        logBody.innerHTML += row;
+                    });
+                } catch (err) {
+                    console.error("Failed to fetch log history", err);
+                }
+            }
+
+            setInterval(fetchHistory, 3000); // auto refresh every 3s
+            fetchHistory(); // initial call
+        });
+    </script>
+
+</body>
+
+</html>

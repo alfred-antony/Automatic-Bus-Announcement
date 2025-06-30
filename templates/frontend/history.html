@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bus Arrival History</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
+    h2 { margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { border: 1px solid #ccc; padding: 8px 12px; text-align: left; }
+    th { background-color: #f9f9f9; }
+  </style>
+</head>
+<body>
+  <h2>Bus Arrival History</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Bus Route</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody id="historyBody"></tbody>
+  </table>
+
+  <script>
+    async function fetchHistory() {
+      try {
+        const res = await fetch('/bus_history');
+        const data = await res.json();
+        const body = document.getElementById('historyBody');
+        body.innerHTML = '';
+        data.forEach(entry => {
+          const row = `<tr><td>${entry.text}</td><td>${entry.time}</td></tr>`;
+          body.innerHTML += row;
+        });
+      } catch (err) {
+        console.error("Failed to fetch history", err);
+      }
+    }
+
+    setInterval(fetchHistory, 3000); // Refresh every 3 seconds
+    fetchHistory();
+  </script>
+</body>
+</html>
