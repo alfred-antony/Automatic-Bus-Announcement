@@ -101,3 +101,11 @@ history.json # Persistent Bus Arrival History
 - ✅ Implemented history.json file saving for persistent log.
 
 ---
+
+## 👨‍💻 Authors
+
+- **Alfred Antony**
+- **Anabel George**
+- **Fabiya Philomina M J**
+
+---
