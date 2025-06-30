@@ -58,11 +58,15 @@ This is especially useful for **visually impaired passengers** and for **crowded
 
 ## 📸 Screenshots
 
-![Screenshot 2025-06-30 121938](https://github.com/user-attachments/assets/7fe14ec0-ef7a-40d3-93d0-56cd006b1586)
-![Screenshot (405)](https://github.com/user-attachments/assets/8d01e45b-3f3c-4e11-8cc3-62f90deb37d5)
-![Screenshot (404)](https://github.com/user-attachments/assets/9939551e-6778-46f4-9c09-83b6fb453efd)
-![Screenshot (335)](https://github.com/user-attachments/assets/c1c07209-6b61-4375-880b-a48235d1b183)
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/7fe14ec0-ef7a-40d3-93d0-56cd006b1586" width="45%" />
+  <img src="https://github.com/user-attachments/assets/8d01e45b-3f3c-4e11-8cc3-62f90deb37d5" width="45%" />
+</p>
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/9939551e-6778-46f4-9c09-83b6fb453efd" width="45%" />
+  <img src="https://github.com/user-attachments/assets/c1c07209-6b61-4375-880b-a48235d1b183" width="45%" />
+</p>
 
 ---
 
